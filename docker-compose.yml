@@ -1,0 +1,43 @@
+version: '3'
+
+volumes:
+  config:
+  data:
+  postgres:
+
+services:
+  keycloak:
+    image: keycloak
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=change_me
+    command: start --optimized
+    depends_on:
+      - postgres
+  postgres:
+      image: postgres:15
+      container_name: postgres
+      volumes:
+        - postgres:/var/lib/postgresql/data
+      environment:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: password
+      ports:
+        - "5432"
+  caddy:
+    image: caddy:2.7.6
+    container_name: caddy
+    command: caddy reverse-proxy --from https://whoami.infra.example.com:443 --to http://keycloak:8080
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - data:/data
+      - config:/config
+    depends_on:
+      - keycloak
